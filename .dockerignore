@@ -1,0 +1,10 @@
+.DS_Store
+.git
+.firebase
+*.log
+mailer
+firestore.*
+firebase.json
+.firebaserc
+emulator-test-accounts.json
+SETUP.md

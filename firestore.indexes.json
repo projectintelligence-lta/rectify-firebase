@@ -1,0 +1,22 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "defects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "discipline", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "outbox",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "toRole", "order": "ASCENDING" },
+        { "fieldPath": "discipline", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

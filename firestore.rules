@@ -1,0 +1,142 @@
+rules_version = '2';
+
+// Rectify — who may read and change what. These rules are the real security: the app only hides
+// buttons, the rules refuse the request. Deploy with:  firebase deploy --only firestore
+//
+// Roles: admin | stel | lta | contractor.  LTA users have a discipline, contractor users a contractorId.
+// A person can only use Rectify once an Admin has set their profile (users/{uid}) to status "active".
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function profilePath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function me() { return get(profilePath(request.auth.uid)).data; }
+    function active() { return signedIn() && exists(profilePath(request.auth.uid)) && me().status == 'active'; }
+    function role() { return me().role; }
+    function isAdmin() { return active() && role() == 'admin'; }
+    function isStaff() { return active() && (role() == 'admin' || role() == 'stel'); }
+
+    // Admin and STEL see every defect, LTA the defects of its discipline, a contractor the defects assigned to it.
+    function canSee(d) {
+      return isStaff()
+        || (active() && role() == 'lta' && d.discipline == me().discipline)
+        || (active() && role() == 'contractor' && d.contractorId != null && d.contractorId == me().contractorId);
+    }
+    function stamped() { return request.resource.data.updatedAt == request.time; }
+    function onlyChanges(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+    function validRole(r) { return r in ['admin', 'stel', 'lta', 'contractor']; }
+
+    // ---------- people ----------
+    match /users/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+
+      // Asking for an account: your own profile, status pending, never Admin.
+      allow create: if signedIn() && request.auth.uid == uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.role in ['stel', 'lta', 'contractor']
+                    && request.resource.data.email == request.auth.token.email
+                 // An Admin adding someone (already approved).
+                 || isAdmin() && validRole(request.resource.data.role)
+                 // The very first Admin, once, together with meta/setup.
+                 || signedIn() && request.auth.uid == uid
+                    && request.resource.data.role == 'admin'
+                    && request.resource.data.status == 'active'
+                    && !exists(/databases/$(database)/documents/meta/setup)
+                    && getAfter(/databases/$(database)/documents/meta/setup).data.adminUid == uid;
+
+      allow update: if isAdmin() && validRole(request.resource.data.role)
+                    && request.resource.data.email == resource.data.email;
+      allow delete: if isAdmin() && uid != request.auth.uid;
+    }
+
+    match /meta/setup {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.adminUid == request.auth.uid
+                    && getAfter(profilePath(request.auth.uid)).data.role == 'admin';
+    }
+    // The mailer's web address, for "Forgot password?" on the sign-in screen. The mailer itself decides what it sends.
+    match /meta/mailer {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // Contractor company names, for the sign-up form (shown before anyone is signed in).
+    match /meta/teams {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- defects and their history ----------
+    match /defects/{id} {
+      allow read: if canSee(resource.data);
+      // New defects come from register uploads (Admin, STEL). Removal (a "deleted" marker) is Admin only.
+      allow create: if isStaff() && stamped() && (!('deleted' in request.resource.data) || isAdmin());
+      allow update: if stamped() && (
+                      isAdmin()
+                   || isStaff() && !('deleted' in request.resource.data)
+                   // LTA works on its own discipline and cannot move a defect to the other one.
+                   || active() && role() == 'lta' && !('deleted' in request.resource.data)
+                      && resource.data.discipline == me().discipline
+                      && request.resource.data.discipline == resource.data.discipline
+                   // A contractor works on its own defects and cannot re-assign them.
+                   || active() && role() == 'contractor' && !('deleted' in request.resource.data)
+                      && resource.data.contractorId == me().contractorId
+                      && request.resource.data.contractorId == resource.data.contractorId
+                      && request.resource.data.discipline == resource.data.discipline);
+      allow delete: if isAdmin();
+
+      match /events/{eventId} {
+        allow read: if canSee(get(/databases/$(database)/documents/defects/$(id)).data);
+        allow create: if isStaff()
+                      || canSee(getAfter(/databases/$(database)/documents/defects/$(id)).data);
+        allow update, delete: if isAdmin();
+      }
+    }
+    // Admin only: lets "Delete all defects" find every history entry.
+    match /{path=**}/events/{eventId} {
+      allow read, delete: if isAdmin();
+    }
+
+    // ---------- register uploads ----------
+    match /imports/{id} {
+      allow read: if active() && role() in ['admin', 'stel', 'lta'];
+      allow create, update: if isStaff() && stamped()
+                            && (!(request.resource.data.get('sample', false) == true) || isAdmin())
+                            && (!('deleted' in request.resource.data) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ---------- email outbox ----------
+    function canSeeMail(m) {
+      return isStaff()
+        || (active() && role() == 'lta' && m.toRole == 'lta' && m.discipline == me().discipline)
+        || (active() && role() == 'contractor' && m.toRole == 'contractor' && m.contractorId == me().contractorId);
+    }
+    match /outbox/{id} {
+      allow read: if canSeeMail(resource.data);
+      // Every workflow step may write the emails it triggers.
+      allow create: if active() && stamped() && !('deleted' in request.resource.data);
+      // Marking an email as sent; removal markers are Admin only.
+      allow update: if stamped() && (isAdmin()
+                    || canSeeMail(resource.data) && onlyChanges(['sentAt', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    // ---------- contractors, settings, photos ----------
+    match /contractors/{id} {
+      allow read: if active();
+      allow write: if isAdmin();
+    }
+    match /kv/{key} {
+      allow read: if active() && key in ['settings', 'contractorsInitialised', 'sampleOffered', 'mailer'];
+      allow write: if (key == 'settings' && isStaff())
+                   || (key in ['contractorsInitialised', 'sampleOffered', 'mailer'] && isAdmin());
+    }
+    match /photos/{id} {
+      allow read: if active();
+      // Photos are added with uploads and workflow steps; they are never changed, only removed by Admin.
+      allow create: if active() && request.resource.data.b is bytes;
+      allow delete: if isAdmin();
+    }
+  }
+}
