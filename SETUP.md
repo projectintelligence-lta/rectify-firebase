@@ -30,7 +30,7 @@ Who can do what is enforced by `firestore.rules`. The app hides buttons, and the
 
 ### 3. Connect the app to your project
 1. **Project settings** (gear icon) → **General** → *Your apps* → click the **`</>` (Web)** icon. Give it a nickname, tick **"Also set up Firebase Hosting"**, and press **Register app**.
-2. Copy the values from the `firebaseConfig` it shows into **`public/js/firebase-config.js`** (`apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId` and `appId`).
+2. Copy the values from the `firebaseConfig` it shows into **`public/js/firebase-config.js`**. Make it by copying `public/js/firebase-config.example.js`; it is not stored in GitHub. (`apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId` and `appId`).
    These values aren't secret. They only tell the app which project to talk to.
 
 ### 4. Install the Firebase command-line tool (once per computer)
@@ -93,7 +93,7 @@ How it stays safe:
 ### Set it up once (about 5 minutes)
 Sign in to Google with the **same account that owns the Firebase project**.
 1. Go to <https://script.google.com>, click **New project**, and rename it **Rectify mailer**.
-2. Replace everything in `Code.gs` with the contents of **`mailer/Code.gs`**.
+2. Replace everything in `Code.gs` with the contents of **`mailer/Code.gs`**. Then add a file named `Config.gs` with the contents of `mailer/Config.gs.example`, and paste in your API key.
 3. Click **Project Settings** (gear icon) and tick **Show "appsscript.json" manifest file in editor**. Back in the editor, replace `appsscript.json` with the contents of **`mailer/appsscript.json`**. Save with ⌘S.
 4. Choose the function **`authorize`** in the toolbar and click **Run**. Google asks you to allow the mailer to send email as you, connect to external services, and read and write your Firestore data. Allow all three.
 5. Click **Deploy → New deployment**, and pick **Web app** as the type.
@@ -162,7 +162,7 @@ Then open <http://localhost:5050/?emulator>. The emulator dashboard is at <http:
 | File | What it is |
 |---|---|
 | `public/` | The app (the same Rectify, with Firebase sign-in and storage) |
-| `public/js/firebase-config.js` | **You fill this in** (step 3) |
+| `public/js/firebase-config.js` | **You fill this in** (step 3). Copy it from `firebase-config.example.js`; not stored in GitHub |
 | `public/js/store.js` | Reads and writes Firestore and handles sign-in |
 | `firestore.rules` | Who may read and change what |
 | `firestore.indexes.json` | Two database indexes the LTA views need |

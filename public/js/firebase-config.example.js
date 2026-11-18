@@ -1,9 +1,9 @@
-/* js/firebase-config.js */
+/* js/firebase-config.example.js: copy to firebase-config.js (not stored in GitHub; GitHub Actions writes it from the FIREBASE_WEB_CONFIG secret). */
 /* Your Firebase project's web settings. Firebase console → Project settings → General → Your apps → Web app →
  * "SDK setup and configuration" → Config. Paste the values below (see SETUP.md, step 3).
  * These values are not secret: they only say which project to talk to. Access is controlled by firestore.rules. */
 window.RECTIFY_FIREBASE = {
-  apiKey: 'AIzaSyDJ4OGJTTk4vR4LbDdF8tl405TwwFYA_i8',
+  apiKey: 'PASTE_FIREBASE_WEB_API_KEY_HERE',
   authDomain: 'rectify-b5f55.firebaseapp.com',
   projectId: 'rectify-b5f55',
   storageBucket: 'rectify-b5f55.firebasestorage.app',

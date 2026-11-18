@@ -5,3 +5,7 @@ emulator-test-accounts.json
 node_modules/
 .env
 *.local.json
+
+# Firebase keys: kept out of GitHub
+public/js/firebase-config.js
+mailer/Config.gs

@@ -1,0 +1,2 @@
+/* Copy this file to Config.gs (which is not stored in GitHub) and paste the Firebase web API key. */
+var MAILER_API_KEY = 'PASTE_FIREBASE_WEB_API_KEY_HERE';

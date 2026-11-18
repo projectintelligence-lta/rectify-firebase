@@ -9,4 +9,7 @@ Rectify is a web app for managing handover defects on rail projects. The operato
 
 See [SETUP.md](SETUP.md) for full setup steps.
 
-The Firebase web config in `public/js/firebase-config.js` is not secret: it only identifies the project, and all access is controlled by the security rules.
+## Keys are not stored in GitHub
+- **Web config:** `public/js/firebase-config.js` is kept out of the repo. Copy `public/js/firebase-config.example.js` to that name and fill it in for local work. GitHub Actions writes it from the `FIREBASE_WEB_CONFIG` repository secret when deploying.
+- **Mailer key:** `mailer/Config.gs` is also kept out of the repo. Copy `mailer/Config.gs.example` to make it.
+- **Key restrictions:** the Firebase web API key is restricted in Google Cloud Console to Rectify's own websites and to the Firebase APIs. The key still appears in the live site's code, as it does for every Firebase web app; these restrictions are what protect it.

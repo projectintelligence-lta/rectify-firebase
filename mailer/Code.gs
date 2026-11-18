@@ -13,9 +13,11 @@
  */
 var CONFIG = {
   projectId: 'rectify-b5f55',
-  apiKey: 'AIzaSyDJ4OGJTTk4vR4LbDdF8tl405TwwFYA_i8',
   senderName: 'Rectify',
 };
+/* The Firebase web API key is set in Config.gs (not in GitHub). Copy Config.gs.example to Config.gs and fill it in.
+ * The key is restricted to Rectify's websites, so requests send Rectify's address as the Referer. */
+var RECTIFY_REFERER = 'https://rectify-b5f55.web.app/';
 
 var FS = 'https://firestore.googleapis.com/v1/projects/' + CONFIG.projectId + '/databases/(default)/documents/';
 
@@ -164,13 +166,16 @@ function addressOf(m, mailboxes, contractors) {
 /* ---------- Firebase ---------- */
 function verifyToken(idToken) {
   if (!idToken) throw new Error('Please sign in to Rectify again.');
-  var r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + CONFIG.apiKey, {
+  var r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + MAILER_API_KEY, {
     method: 'post',
     contentType: 'application/json',
+    headers: { Referer: RECTIFY_REFERER },
     payload: JSON.stringify({ idToken: idToken }),
     muteHttpExceptions: true,
   });
   var body = JSON.parse(r.getContentText() || '{}');
+  var why = JSON.stringify(body.error || '');
+  if (/API_KEY|referer|PERMISSION_DENIED|blocked/i.test(why)) throw new Error('Mailer setup problem: the API key was refused (' + why.slice(0, 160) + ').');
   if (r.getResponseCode() !== 200 || !body.users || !body.users.length) throw new Error('Your sign-in has expired. Reload Rectify and try again.');
   return body.users[0].localId;
 }

@@ -1,5 +1,6 @@
 # Deploys public/ to Firebase Hosting (project rectify-b5f55) on every push to main.
-# Needs the repository secret FIREBASE_SERVICE_ACCOUNT_RECTIFY_B5F55 (a Firebase service account key, JSON).
+# Needs repository secrets: FIREBASE_SERVICE_ACCOUNT_RECTIFY_B5F55 (service account key, JSON)
+# and FIREBASE_WEB_CONFIG (the full contents of public/js/firebase-config.js, which is not stored in GitHub).
 name: Deploy to Firebase Hosting
 on:
   push:
@@ -10,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Write Firebase web config from secret
+        env:
+          FIREBASE_WEB_CONFIG: ${{ secrets.FIREBASE_WEB_CONFIG }}
+        run: |
+          test -n "$FIREBASE_WEB_CONFIG" || { echo "FIREBASE_WEB_CONFIG secret is missing"; exit 1; }
+          printf '%s\n' "$FIREBASE_WEB_CONFIG" > public/js/firebase-config.js
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
